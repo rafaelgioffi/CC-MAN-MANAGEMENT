@@ -18,6 +18,8 @@ namespace CC_MAN_MANAGEMENT
             string FailFolder = ConfigurationSettings.AppSettings["FailFolder"];
 
             string StationFiles = ConfigurationSettings.AppSettings["StationFiles"];
+            string TextFilesExtension = ConfigurationSettings.AppSettings["TextFilesExtension"];
+            string BatFilesExtension = ConfigurationSettings.AppSettings["BatFilesExtension"];
 
             string AJUST_Folder = ConfigurationSettings.AppSettings["AJUST_Folder"];
             string AJUST_File = ConfigurationSettings.AppSettings["AJUST_File"];
@@ -48,9 +50,9 @@ namespace CC_MAN_MANAGEMENT
 
             string[] filesInFolder;
             int filesQuant;
-            
-            
-            Log("Iniciando o processamento...");            
+
+
+            Log("Iniciando o processamento...");
             //analisa a pasta de entrada...
             try
             {
@@ -64,59 +66,25 @@ namespace CC_MAN_MANAGEMENT
                 return;
             }
 
-            if ( filesQuant > 0 )
+            if (filesQuant > 0)
             {
                 int counter = 1;
                 Log($"Iniciando o processamento de {filesQuant} arquivos...");
-                
+
                 foreach (var file in filesInFolder)
                 {
                     Log($"Processando o arquivo {file}... ({counter}/{filesQuant})");
-                    
+
                     try //analisa o nome do arquivo para verificar a validade...
                     {
                         string[] pathFile = file.Split('\\');
                         string fileName = pathFile.Last();
                         string[] actualFile = fileName.Split('.');
 
-                        if (actualFile[0] == StationFiles && actualFile[1] == AJUST_File && actualFile.Last().ToLower() == "txt")   //verifica se é um arquivo AJUST válido...
+                        if (actualFile[0] == StationFiles && actualFile[1] == AJUST_File && actualFile.Last().ToLower() == TextFilesExtension)   //verifica se é um arquivo AJUST válido...
                         {
-                            try  //tenta copiar o arquivo para o processamento...
-                            {
-                                File.Copy(file, $"{ProcessFolder}{actualFile[0]}.{actualFile[1]}.{actualFile.Last()}", true);
-                                Log($"Arquivo {file} copiado para {ProcessFolder}{actualFile[0]}.{actualFile[1]}.{actualFile.Last()}...");
-                            }
-                            catch
-                            {
-                                Log($"Falha ao copiar o arquivo {file} para {ProcessFolder}{actualFile[0]}.{actualFile[1]}.{actualFile.Last()}...");
-                                File.Move(file, $"{FailFolder}{actualFile[0]}.{actualFile[1]}.{actualFile.Last()}");
-                                return;
-                            }
-
-                            try //tenta executar a bat...
-                            { 
-                                Log($"Executando o {ProcessFolder}{AJUST_Folder}.bat...");
-                                Process.Start(ProcessFolder + AJUST_Folder + ".bat").WaitForExit();
-                                Log($"Execução do {ProcessFolder}{AJUST_Folder}.bat finalizada com sucesso!");
-                            }
-                            catch (Exception ex )
-                            {
-                                Log($"Falha ao executar {ProcessFolder}{AJUST_Folder}.bat...\n{ex.Message}");
-                                return;
-                            }
-
-                            try  //tenta mover o arquivo da origem para o destino com sucesso...
-                            {
-                                File.Move(file, $"{SuccessFolder}{fileName}");
-                                Log($"Arquivo {file} movido para {SuccessFolder}{fileName}");
-                            }
-                            catch (Exception ex)
-                            {
-                                Log($"Falha ao mover {file} para {SuccessFolder}{fileName}...\n{ex.Message}");
-                                return;
-                            }
+                            ProcessFile(file, actualFile[0], actualFile[1], actualFile.Last(), AJUST_Folder);
                         }
-                        
 
                     }
                     catch (Exception ex)
@@ -125,6 +93,54 @@ namespace CC_MAN_MANAGEMENT
                     }
                 }
                 Log("", true);
+            }
+
+            void ProcessFile(string fileName, string fileStation, string chargeName, string extension, string processFolder)
+            {
+                try  //tenta copiar o arquivo para o processamento...
+                {
+                    File.Copy(fileName, $"{ProcessFolder}{fileStation}.{chargeName}.{extension}", true);
+                    Log($"Arquivo {fileName} copiado para {ProcessFolder}{fileStation}.{chargeName}.{extension}...");
+                }
+                catch
+                {
+                    Log($"Falha ao copiar o arquivo {fileName} para {ProcessFolder}{fileStation}.{chargeName}.{extension}...");
+                    try  //tenta mover para a pasta de processamentos falhados...
+                    {
+                        File.Move(fileName, $"{FailFolder}{fileStation}.{chargeName}.{extension}.D{DateTime.Now.ToString("yyMMdd")}.T{DateTime.Now.ToString("HHmmss")}");
+                        Log($"Arquivo {fileName} movido para {FailFolder}{fileStation}.{chargeName}.{extension}.D{DateTime.Now.ToString("yyMMdd")}.T{DateTime.Now.ToString("HHmmss")}");
+                    }
+                    catch
+                    {
+                        Log($"Falha ao mover o arquivo {fileName} para {FailFolder}{fileStation}.{chargeName}.{extension}.D{DateTime.Now.ToString("yyMMdd")}.T{DateTime.Now.ToString("HHmmss")}");
+                        return;
+                    }
+                    return;
+                }
+
+                try //tenta executar a bat...
+                {
+                    Log($"Executando o {ProcessFolder}{chargeName}{BatFilesExtension}...");
+                    Process.Start(ProcessFolder + processFolder + BatFilesExtension).WaitForExit();
+                    Log($"Execução do {ProcessFolder}{processFolder}{BatFilesExtension} finalizada com sucesso!");
+                }
+                catch (Exception ex)
+                {
+                    Log($"Falha ao executar {ProcessFolder}{processFolder}{BatFilesExtension}...\n{ex.Message}");
+                    return;
+                }
+
+                try  //tenta mover o arquivo da origem para o destino com sucesso...
+                {
+                    File.Move(fileName, $"{SuccessFolder}{fileName}");  //PAREI AQUI!!!
+                    Log($"Arquivo {fileName} movido para {SuccessFolder}{fileName}");
+                }
+                catch (Exception ex)
+                {
+                    Log($"Falha ao mover {file} para {SuccessFolder}{fileName}...\n{ex.Message}");
+                    return;
+                }
+
             }
 
             void Log(string msg, bool special = false)
