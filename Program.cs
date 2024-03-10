@@ -58,7 +58,6 @@ namespace CC_MAN_MANAGEMENT
             {
                 filesInFolder = Directory.GetFiles(SourceFolder, "*");
                 filesQuant = filesInFolder.Length;
-
             }
             catch (Exception ex)
             {
@@ -72,7 +71,7 @@ namespace CC_MAN_MANAGEMENT
                 Log($"Iniciando o processamento de {filesQuant} arquivos...");
 
                 foreach (var file in filesInFolder)
-                {
+                {   //processa cada arquivo da pasta...
                     Log($"Processando o arquivo {file}... ({counter}/{filesQuant})");
 
                     try //analisa o nome do arquivo para verificar a validade...
@@ -81,9 +80,13 @@ namespace CC_MAN_MANAGEMENT
                         string fileName = pathFile.Last();
                         string[] actualFile = fileName.Split('.');
 
-                        if (actualFile[0] == StationFiles && actualFile[1] == AJUST_File && actualFile.Last().ToLower() == TextFilesExtension)   //verifica se é um arquivo AJUST válido...
+                        if (actualFile[0] == StationFiles && actualFile[1] == AJUST_File && actualFile[2].ToUpper() == TextFilesExtension)   //verifica se é um arquivo AJUST válido...
                         {
-                            ProcessFile(file, actualFile[0], actualFile[1], actualFile.Last(), AJUST_Folder);
+                            ProcessFile(file, actualFile[0], actualFile[1], actualFile[2], AJUST_Folder);
+                        }
+                        else if (actualFile[0] == StationFiles && actualFile[1] == BORDE_File && actualFile[2].ToUpper() == TextFilesExtension)
+                        {
+                            ProcessFile(file, actualFile[0], actualFile[1], actualFile[2], BORDE_Folder);
                         }
 
                     }
@@ -92,7 +95,11 @@ namespace CC_MAN_MANAGEMENT
                         Log($"Falha ao processar o arquivo {file}...\n{ex.Message}");
                     }
                 }
-                Log("", true);
+                Log(" ", true);
+            }
+            else
+            {
+                Log($"Nenhum arquivo para processar.");
             }
 
             void ProcessFile(string fileName, string fileStation, string chargeName, string extension, string processFolder)
@@ -102,17 +109,30 @@ namespace CC_MAN_MANAGEMENT
                     File.Copy(fileName, $"{ProcessFolder}{fileStation}.{chargeName}.{extension}", true);
                     Log($"Arquivo {fileName} copiado para {ProcessFolder}{fileStation}.{chargeName}.{extension}...");
                 }
-                catch
+                catch (Exception ex)
                 {
-                    Log($"Falha ao copiar o arquivo {fileName} para {ProcessFolder}{fileStation}.{chargeName}.{extension}...");
+                    Log($"Falha ao copiar o arquivo {fileName} para {ProcessFolder}{fileStation}.{chargeName}.{extension}...\n{ex.Message}");
+
                     try  //tenta mover para a pasta de processamentos falhados...
                     {
-                        File.Move(fileName, $"{FailFolder}{fileStation}.{chargeName}.{extension}.D{DateTime.Now.ToString("yyMMdd")}.T{DateTime.Now.ToString("HHmmss")}");
-                        Log($"Arquivo {fileName} movido para {FailFolder}{fileStation}.{chargeName}.{extension}.D{DateTime.Now.ToString("yyMMdd")}.T{DateTime.Now.ToString("HHmmss")}");
+                        if (!Directory.Exists(FailFolder + processFolder))  // Verifica se a pasta da interface existe...
+                            try
+                            {
+                                Directory.CreateDirectory(FailFolder + processFolder);
+                                Log($"Diretório {FailFolder}\\{processFolder} criado.");
+                            }
+                            catch (Exception exc) 
+                            {
+                                Log($"Falha ao criar o diretório {FailFolder}\\{processFolder}...\n{exc.Message}");
+                                return;
+                            }
+
+                        File.Move(fileName, $"{FailFolder}{processFolder}\\{fileStation}.{chargeName}.{extension}.D{DateTime.Now.ToString("yyMMdd")}.T{DateTime.Now.ToString("HHmmss")}");
+                        Log($"Arquivo {fileName} movido para {FailFolder}{processFolder}\\{fileStation}.{chargeName}.{extension}.D{DateTime.Now.ToString("yyMMdd")}.T{DateTime.Now.ToString("HHmmss")}");
                     }
                     catch
                     {
-                        Log($"Falha ao mover o arquivo {fileName} para {FailFolder}{fileStation}.{chargeName}.{extension}.D{DateTime.Now.ToString("yyMMdd")}.T{DateTime.Now.ToString("HHmmss")}");
+                        Log($"Falha ao mover o arquivo {fileName} para {FailFolder}{processFolder}\\{fileStation}.{chargeName}.{extension}.D{DateTime.Now.ToString("yyMMdd")}.T{DateTime.Now.ToString("HHmmss")}");
                         return;
                     }
                     return;
@@ -120,27 +140,41 @@ namespace CC_MAN_MANAGEMENT
 
                 try //tenta executar a bat...
                 {
-                    Log($"Executando o {ProcessFolder}{chargeName}{BatFilesExtension}...");
-                    Process.Start(ProcessFolder + processFolder + BatFilesExtension).WaitForExit();
-                    Log($"Execução do {ProcessFolder}{processFolder}{BatFilesExtension} finalizada com sucesso!");
+                    Log($"Executando o {ProcessFolder}{processFolder}.{BatFilesExtension}...");
+                    Process.Start(ProcessFolder + processFolder + "." + BatFilesExtension).WaitForExit();
+                    Log($"Execução do {ProcessFolder}{processFolder}.{BatFilesExtension} finalizada com sucesso!");
                 }
                 catch (Exception ex)
                 {
-                    Log($"Falha ao executar {ProcessFolder}{processFolder}{BatFilesExtension}...\n{ex.Message}");
+                    Log($"Falha ao executar {ProcessFolder}{processFolder}.{BatFilesExtension} ...\n{ex.Message}");
+                    return;
+                }
+
+                try  //verifica se a pasta de processados com sucesso/interface existe
+                {
+                    if (!Directory.Exists(SuccessFolder + "\\" + processFolder))
+                    {
+                        Directory.CreateDirectory(SuccessFolder + "\\" + processFolder);
+                        Log($"Diretório {SuccessFolder}\\{processFolder} criado.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log($"Falha ao criar o diretório {SuccessFolder}\\{processFolder}...\n{ex.Message}");
                     return;
                 }
 
                 try  //tenta mover o arquivo da origem para o destino com sucesso...
                 {
-                    File.Move(fileName, $"{SuccessFolder}{fileName}");  //PAREI AQUI!!!
-                    Log($"Arquivo {fileName} movido para {SuccessFolder}{fileName}");
+                    File.Move(fileName, $"{SuccessFolder}{processFolder}\\{fileStation}.{chargeName}.{extension}.D{DateTime.Now.ToString("yyMMdd")}.T{DateTime.Now.ToString("HHmmss")}");
+                    Log($"Arquivo {fileName} movido para {SuccessFolder}{processFolder}\\{fileStation}.{chargeName}.{extension}.D{DateTime.Now.ToString("yyMMdd")}.T{DateTime.Now.ToString("HHmmss")}");
                 }
                 catch (Exception ex)
                 {
-                    Log($"Falha ao mover {file} para {SuccessFolder}{fileName}...\n{ex.Message}");
+                    Log($"Falha ao mover {fileName} para {SuccessFolder}{processFolder}\\{fileStation}.{chargeName}.{extension}.D{DateTime.Now.ToString("yyMMdd")}.T{DateTime.Now.ToString("HHmmss")}...\n{ex.Message}");
                     return;
                 }
-
+                Log(" ", true);
             }
 
             void Log(string msg, bool special = false)
@@ -150,10 +184,12 @@ namespace CC_MAN_MANAGEMENT
                     if (special)
                     {
                         swLog.WriteLine(msg);
+                        Console.WriteLine(msg);
                     }
                     else
                     {
                         swLog.WriteLine($"{DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss")} => {msg}");
+                        Console.WriteLine($"{DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss")} => {msg}");
                     }
                 }
             }
