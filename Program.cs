@@ -50,6 +50,8 @@ namespace CC_MAN_MANAGEMENT
 
             string[] filesInFolder;
             int filesQuant;
+            string validateDate = null;
+            string validateTime = null;
 
 
             Log("Iniciando o processamento...");
@@ -78,24 +80,98 @@ namespace CC_MAN_MANAGEMENT
                     {
                         string[] pathFile = file.Split('\\');
                         string fileName = pathFile.Last();
-                        string[] actualFile = fileName.Split('.');
+                        string[] actualFile = fileName.Split('.');                                            
 
-                        if (actualFile[0] == StationFiles && actualFile[1] == AJUST_File && actualFile[2].ToUpper() == TextFilesExtension)   //verifica se é um arquivo AJUST válido...
+                        // Verifica se parte do formato do arquivo está válido...
+                        bool partialValidFile = false;
+                        if (actualFile[0] == StationFiles && actualFile[2] == TextFilesExtension)
+                            partialValidFile = true;
+                        else
+                        {
+                            partialValidFile = false;                            
+                        }
+
+                        // Verifica se possui uma data no nome do arquivo...
+                        if (partialValidFile && actualFile.Length > 3 && actualFile.Length < 6) 
+                        {
+                            validateDate = actualFile[3];
+                            validateTime = actualFile[4];
+                        }
+                        else if (partialValidFile && actualFile.Length < 4)
+                        {
+                            var fileInf = new FileInfo(file);
+                            validateDate = $"D{fileInf.LastWriteTime.ToString("yyMMdd")}";
+                            validateTime = $"T{fileInf.LastWriteTime.ToString("HHmmss")}";
+                        }                        
+
+                        if (partialValidFile && actualFile[1] == AJUST_File)   //verifica se é um arquivo AJUST válido...
                         {
                             ProcessFile(file, actualFile[0], actualFile[1], actualFile[2], AJUST_Folder);
                         }
-                        else if (actualFile[0] == StationFiles && actualFile[1] == BORDE_File && actualFile[2].ToUpper() == TextFilesExtension)
+                        else if (partialValidFile && actualFile[1] == CRDIF_File)  // Verifica se é um arquivo CRDIF válido...
+                        {
+                            ProcessFile(file, actualFile[0], actualFile[1], actualFile[2], CRDIF_Folder);
+                        }
+                        else if (partialValidFile && actualFile[1] == NFPEN_File)  // Verifica se é um arquivo NFPEN válido...
+                        {
+                            ProcessFile(file, actualFile[0], actualFile[1], actualFile[2], NFPEN_Folder);
+                        }
+                        else if (partialValidFile && actualFile[1] == BORDE_File)  // Verifica se é um arquivo BORDE válido...
                         {
                             ProcessFile(file, actualFile[0], actualFile[1], actualFile[2], BORDE_Folder);
                         }
-
+                        else if (partialValidFile && actualFile[1] == SALLH_File)  // Verifica se é um arquivo SALLH válido...
+                        {
+                            ProcessFile(file, actualFile[0], actualFile[1], actualFile[2], SALLH_Folder);
+                        }
+                        else if (partialValidFile && actualFile[1] == SALCR_File)  // Verifica se é um arquivo SALCR válido...
+                        {
+                            ProcessFile(file, actualFile[0], actualFile[1], actualFile[2], SALCR_Folder);
+                        }
+                        else if (partialValidFile && actualFile[1] == IRMES_File)  // Verifica se é um arquivo IRMES válido...
+                        {
+                            ProcessFile(file, actualFile[0], actualFile[1], actualFile[2], IRMES_Folder);
+                        }
+                        else if (partialValidFile && actualFile[1] == NDNCS_File)  // Verifica se é um arquivo NDNCS válido...
+                        {
+                            ProcessFile(file, actualFile[0], actualFile[1], actualFile[2], NDNCS_Folder);
+                        }
+                        else if (partialValidFile && actualFile[1] == LHDIF_File)  // Verifica se é um arquivo LHDIF válido...
+                        {
+                            ProcessFile(file, actualFile[0], actualFile[1], actualFile[2], LHDIF_Folder);
+                        }
+                        else if (partialValidFile && actualFile[1] == ENCAC_File)  // Verifica se é um arquivo ENCAC válido...
+                        {
+                            ProcessFile(file, actualFile[0], actualFile[1], actualFile[2], ENCAC_Folder);
+                        }
+                        else if (partialValidFile && actualFile[1] == NOTAS_File)  // Verifica se é um arquivo NOTAS válido...
+                        {
+                            ProcessFile(file, actualFile[0], actualFile[1], actualFile[2], NOTAS_Folder);
+                        }
+                        else if (partialValidFile && actualFile[1] == HISTO_File)  // Verifica se é um arquivo HISTO válido...
+                        {
+                            ProcessFile(file, actualFile[0], actualFile[1], actualFile[2], HISTO_Folder);
+                        }
+                        else if (partialValidFile && actualFile[1] == CONTA_File)  // Verifica se é um arquivo CONTA válido...
+                        {
+                            ProcessFile(file, actualFile[0], actualFile[1], actualFile[2], CONTA_Folder);
+                        }
+                        else  // Qualquer outro nome é inválido e ignora o processamento...
+                        {
+                            Log($"Arquivo {file} não é uma carga do Conta Corrente ou está em formato inválido.");                            
+                        }
                     }
                     catch (Exception ex)
                     {
                         Log($"Falha ao processar o arquivo {file}...\n{ex.Message}");
                     }
+                    Log(" ", true);
+                    counter++;
                 }
-                Log(" ", true);
+                Log (" ", true);
+                Log(" Fim do processamento.");
+                Log (" ", true);
+                Log (" ", true);
             }
             else
             {
@@ -127,12 +203,12 @@ namespace CC_MAN_MANAGEMENT
                                 return;
                             }
 
-                        File.Move(fileName, $"{FailFolder}{processFolder}\\{fileStation}.{chargeName}.{extension}.D{DateTime.Now.ToString("yyMMdd")}.T{DateTime.Now.ToString("HHmmss")}");
-                        Log($"Arquivo {fileName} movido para {FailFolder}{processFolder}\\{fileStation}.{chargeName}.{extension}.D{DateTime.Now.ToString("yyMMdd")}.T{DateTime.Now.ToString("HHmmss")}");
+                        File.Move(fileName, $"{FailFolder}{processFolder}\\{fileStation}.{chargeName}.{extension}.{validateDate}.{validateTime}");
+                        Log($"Arquivo {fileName} movido para {FailFolder}{processFolder}\\{fileStation}.{chargeName}.{extension}.{validateDate}.{validateTime}");
                     }
                     catch
                     {
-                        Log($"Falha ao mover o arquivo {fileName} para {FailFolder}{processFolder}\\{fileStation}.{chargeName}.{extension}.D{DateTime.Now.ToString("yyMMdd")}.T{DateTime.Now.ToString("HHmmss")}");
+                        Log($"Falha ao mover o arquivo {fileName} para {FailFolder}{processFolder}\\{fileStation}.{chargeName}.{extension}.{validateDate}.{validateTime}");
                         return;
                     }
                     return;
@@ -155,7 +231,7 @@ namespace CC_MAN_MANAGEMENT
                     if (!Directory.Exists(SuccessFolder + "\\" + processFolder))
                     {
                         Directory.CreateDirectory(SuccessFolder + "\\" + processFolder);
-                        Log($"Diretório {SuccessFolder}\\{processFolder} criado.");
+                        Log($"Diretório {SuccessFolder}{processFolder} criado.");
                     }
                 }
                 catch (Exception ex)
@@ -166,15 +242,14 @@ namespace CC_MAN_MANAGEMENT
 
                 try  //tenta mover o arquivo da origem para o destino com sucesso...
                 {
-                    File.Move(fileName, $"{SuccessFolder}{processFolder}\\{fileStation}.{chargeName}.{extension}.D{DateTime.Now.ToString("yyMMdd")}.T{DateTime.Now.ToString("HHmmss")}");
-                    Log($"Arquivo {fileName} movido para {SuccessFolder}{processFolder}\\{fileStation}.{chargeName}.{extension}.D{DateTime.Now.ToString("yyMMdd")}.T{DateTime.Now.ToString("HHmmss")}");
+                    File.Move(fileName, $"{SuccessFolder}{processFolder}\\{fileStation}.{chargeName}.{extension}.{validateDate}.{validateTime}");
+                    Log($"Arquivo {fileName} movido para {SuccessFolder}{processFolder}\\{fileStation}.{chargeName}.{extension}.{validateDate}.{validateTime}");
                 }
                 catch (Exception ex)
                 {
-                    Log($"Falha ao mover {fileName} para {SuccessFolder}{processFolder}\\{fileStation}.{chargeName}.{extension}.D{DateTime.Now.ToString("yyMMdd")}.T{DateTime.Now.ToString("HHmmss")}...\n{ex.Message}");
+                    Log($"Falha ao mover {fileName} para {SuccessFolder}{processFolder}\\{fileStation}.{chargeName}.{extension}.{validateDate}.{validateTime}...\n{ex.Message}");
                     return;
                 }
-                Log(" ", true);
             }
 
             void Log(string msg, bool special = false)
